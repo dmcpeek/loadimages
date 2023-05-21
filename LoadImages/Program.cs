@@ -1,33 +1,34 @@
 ﻿using Microsoft.Extensions.Configuration;
-using Microsoft.VisualBasic;
 using MySql.Data.MySqlClient;
-using System.ComponentModel;
 using System.Data;
-
 
 
 namespace LoadImages
 {
-    internal class Program
+    class Program
     {
-        private static object repo;
-        private static object instance;
-
-        static void Main(string[] args)
+        static void Main()
         {
+            string connectionString = "Server=localhost;Database=paphiopedilum;uid=root;Pwd=password"; // Replace with your MySQL connection string
 
-            var config = new ConfigurationBuilder()
-            .SetBasePath(Directory.GetCurrentDirectory())
-            .AddJsonFile("appsettings.json")
-            .Build();
+            Console.Write("Enter the path to the image directory: ");
+            string directoryPath = Console.ReadLine();
 
-            string connString = config.GetConnectionString("DefaultConnection");
+            Console.Write("Enter the image file name: ");
+            string fileName = Console.ReadLine();
 
-            IDbConnection conn = new MySqlConnection(connString);
-            string connectionString = "your_connection_string"; // Replace with your MySQL connection string
+            // Combine the directory path and file name, handling the trailing backslash
+            string imagePath = Path.Combine(directoryPath.TrimEnd('\\'), fileName);
+
+            // Check if the file exists
+            if (!File.Exists(imagePath))
+            {
+                Console.WriteLine("File not found!");
+                return;
+            }
 
             // Read the image file as a byte array
-            byte[] imageBytes = File.ReadAllBytes("path_to_image_file");
+            byte[] imageBytes = File.ReadAllBytes(imagePath);
 
             // Establish the database connection
             using (MySqlConnection connection = new MySqlConnection(connectionString))
@@ -35,11 +36,12 @@ namespace LoadImages
                 connection.Open();
 
                 // Create a parameterized SQL query to insert the image into the database
-                string sql = "INSERT INTO images (image_data) VALUES (@ImageData)";
+                string sql = "INSERT INTO images (Image, FileName) VALUES (@Image, @FileName)";
                 using (MySqlCommand command = new MySqlCommand(sql, connection))
                 {
-                    // Add the image byte array as a parameter
-                    command.Parameters.AddWithValue("@ImageData", imageBytes);
+                    // Add the image byte array and filename as parameters
+                    command.Parameters.AddWithValue("@Image", imageBytes);
+                    command.Parameters.AddWithValue("@FileName", fileName);
 
                     // Execute the query
                     int rowsAffected = command.ExecuteNonQuery();
